@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Andy的飲料訂購系統</title>
+
+     <!-- 引入 XLSX.js 函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* 設定網頁基本樣式 */
@@ -175,7 +177,7 @@
             alert("已清空訂單記錄！");
         }
         
-        /* 讀取當日訂單 */
+        /* 讀取當天ㄉ訂單 */
         function loadOrders() {
             const today = new Date().toISOString().split('T')[0];
             const filename = `${today}_飲料訂購.xlsx`;
