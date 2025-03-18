@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andy的飲料訂購系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 設定網頁基本樣式 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+            background: #fff;
+            padding: 20px;
+            margin: 50px auto;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+            text-align: left;
+        }
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: none;
+            background-color: #77a88d;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #598987;
+        }
+        #orderList {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #orderItems {
+            list-style: none;
+            padding: 0;
+        }
+        #orderItems li {
+            background: #f1f1f1;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body onload="loadOrders()">
+    <div class="container">
+        <h2>飲料訂購系統</h2>
+        
+        <!-- 訂購表單 -->
+        <label for="name">姓名：</label>
+        <input type="text" id="name" required>
+        
+        <label for="store">選擇店家：</label>
+        <select id="store" onchange="loadDrinks()">
+            <option value="">請選擇</option>
+            <option value="50嵐.csv">50嵐</option>
+            <option value="可不可.csv">可不可</option>
+            <option value="迷客夏.csv">迷客夏</option>
+            <option value="得正.csv">得正</option>
+            <option value="清心福全.csv">清心福全</option>
+            <option value="麻古茶坊.csv">麻古茶坊</option>
+            <option value="CoCo.csv">CoCo</option>
+        </select>
+        
+        <label for="drink">選擇飲料：</label>
+        <select id="drink">
+            <option value="">請選擇店家後載入</option>
+        </select>
+        
+        <label for="sweetness">甜度：</label>
+        <select id="sweetness">
+            <option value="無糖">無糖</option>
+            <option value="3分糖">3分糖</option>
+            <option value="5分糖">5分糖</option>
+            <option value="7分糖">7分糖</option>
+            <option value="全糖">全糖</option>
+        </select>
+        
+        <label for="note">備註：</label>
+        <textarea id="note"></textarea>
+        
+        <!-- 按鈕區域 -->
+        <button onclick="submitOrder()">提交訂單</button>
+        <button onclick="clearOrders()" style="background-color: #ff6670;">清空訂單</button>
+        
+        <!-- 訂單記錄區 -->
+        <div id="orderList">
+            <h3>今日訂單記錄</h3>
+            <ul id="orderItems"></ul>
+        </div>
+    </div>
+
+    <script>
+        /* 讀取所選店家的飲料選單 */
+        function loadDrinks() {
+            const store = document.getElementById("store").value;
+            const drinkSelect = document.getElementById("drink");
+            drinkSelect.innerHTML = "<option value=''>載入中...</option>";
+            
+            if (!store) {
+                drinkSelect.innerHTML = "<option value=''>請選擇店家</option>";
+                return;
+            }
+            
+            fetch(store)
+                .then(response => response.text())
+                .then(data => {
+                    const drinks = data.split(/\r?\n/).filter(line => line.trim() !== "");
+                    drinkSelect.innerHTML = "<option value=''>請選擇</option>";
+                    drinks.forEach(drink => {
+                        let option = document.createElement("option");
+                        option.value = drink.trim();
+                        option.textContent = drink.trim();
+                        drinkSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    drinkSelect.innerHTML = "<option value=''>載入失敗</option>";
+                    console.error("無法載入飲料品項", error);
+                });
+        }
+        
+        /* 提交訂單 */
+        function submitOrder() {
+            const name = document.getElementById("name").value;
+            const drink = document.getElementById("drink").value;
+            const sweetness = document.getElementById("sweetness").value;
+            const note = document.getElementById("note").value;
+            
+            if (!name || !drink) {
+                alert("請填寫姓名並選擇飲料！");
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `${today}_飲料訂購.xlsx`;
+            
+            let orders = JSON.parse(localStorage.getItem(filename)) || [];
+            orders.push({ 姓名: name, 飲料: drink, 甜度: sweetness, 備註: note });
+            localStorage.setItem(filename, JSON.stringify(orders));
+            
+            const ws = XLSX.utils.json_to_sheet(orders);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "訂單");
+            XLSX.writeFile(wb, filename);
+            
+            loadOrders();
+        }
+        
+        /* 清空訂單 */
+        function clearOrders() {
+            localStorage.clear();
+            document.getElementById("orderItems").innerHTML = "";
+            alert("已清空訂單記錄！");
+        }
+        
+        /* 讀取當日訂單 */
+        function loadOrders() {
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `${today}_飲料訂購.xlsx`;
+            let orders = JSON.parse(localStorage.getItem(filename)) || [];
+            
+            const orderList = document.getElementById("orderItems");
+            orderList.innerHTML = "";
+            orders.forEach(order => {
+                let li = document.createElement("li");
+                li.textContent = `${order.姓名}: ${order.飲料} (${order.甜度}) - ${order.備註}`;
+                orderList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
